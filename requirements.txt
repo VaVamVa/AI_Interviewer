@@ -1,0 +1,12 @@
+PyQt6>=6.7.0
+faster-whisper>=1.0.0
+edge-tts>=7.0.0
+sounddevice>=0.5.0
+scipy>=1.13.0
+pygame>=2.6.0
+google-genai>=1.0.0
+openai>=1.40.0
+anthropic>=0.34.0
+ollama>=0.3.0
+pypdf>=4.0.0
+nuitka[onefile]>=2.4.0

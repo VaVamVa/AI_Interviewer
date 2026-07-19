@@ -1,0 +1,33 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Nuitka 빌드 산출물
+dist/
+*.build/
+*.onefile-build/
+*.exe
+nuitka-crash-report.xml
+
+# 런타임 데이터 (설치 경로에 생성되는 것들)
+config.json
+sessions/
+Log/
+models/
+
+# 실제 면접 대화 기록 (개인정보 포함)
+transcripts/
+
+# 임시 오디오 파일
+*.wav
+*.mp3
+
+# IDE
+.vscode/
+.idea/
+
+# Windows
+Thumbs.db
+desktop.ini

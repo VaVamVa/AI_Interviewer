@@ -71,7 +71,7 @@ Windows에서 설치 파일 하나로 실행되는 **음성 대화형 AI 모의 
 | **OpenAI** | API Key | 유료 | |
 | **Anthropic (Claude)** | API Key | 유료 | Claude Console에서 별도 크레딧 충전 필요 |
 | **Ollama** | 로컬 실행 | 완전 무료 | 인터넷 연결 불필요, PC에 수 GB 저장공간 필요 |
-| **CLI** (Claude Code / Gemini CLI) | 구독 계정 재사용 | 구독료만 | API Key 불필요하지만 응답이 느리고 토큰 소모가 큼 |
+| **CLI** (Claude Code / Antigravity CLI) | 구독 계정 재사용 | 구독료만 | API Key 불필요하지만 응답이 느리고 토큰 소모가 큼 |
 
 발급·설치 방법은 앱 안 **[📖 시작하기 전에]** 토글(`prompts/guide_api.md`, `prompts/guide_cli.md`)에 상세히 정리되어 있습니다.
 

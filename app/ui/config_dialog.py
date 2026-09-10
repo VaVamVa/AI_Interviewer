@@ -91,7 +91,7 @@ class ConfigDialog(QDialog):
         self._model_combo = QComboBox()
         self._model_combo.setMinimumWidth(240)
         self._cli_cmd_edit = QLineEdit()
-        self._cli_cmd_edit.setPlaceholderText("CLI 명령어 (예: claude)")
+        self._cli_cmd_edit.setPlaceholderText("CLI 명령어 (예: agy, claude)")
         self._cli_detect_label = QLabel()
         model_row.addWidget(self._model_combo)
         model_row.addWidget(self._cli_cmd_edit)
@@ -311,8 +311,10 @@ class ConfigDialog(QDialog):
     def _on_cli_cmd_changed(self, text: str) -> None:
         cmd = text.strip()
         found = shutil.which(cmd) if cmd else None
-        base_name = Path(cmd).stem.lower() if cmd else ""
-        known = base_name in {"claude", "gemini", "codex"}
+        if cmd.lower() == "antigravity" and not found:
+            found = shutil.which("agy")
+        base_name = Path(found or cmd).stem.lower() if cmd else ""
+        known = base_name in {"agy", "claude", "antigravity", "codex"}
 
         if not found:
             self._cli_detect_label.setText("❌ 미감지")
@@ -321,7 +323,7 @@ class ConfigDialog(QDialog):
             self._cli_detect_label.setText("✅ 감지됨")
             self._cli_detect_label.setStyleSheet("color: green;")
         else:
-            self._cli_detect_label.setText("⚠️ AI CLI 아님  (지원: claude, gemini, codex)")
+            self._cli_detect_label.setText("⚠️ AI CLI 아님  (지원: agy, claude, codex)")
             self._cli_detect_label.setStyleSheet("color: #e07000;")
         config.reset_ai_flag(self._cfg)
         self._refresh_flag_summary()

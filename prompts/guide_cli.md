@@ -37,27 +37,22 @@ claude --version
 
 ---
 
-## Gemini CLI (명령어: `gemini`)
+## Antigravity CLI (명령어: `agy`)
 
-Google 계정 및 Gemini Advanced 구독이 필요합니다.
+Google Antigravity 계정이 필요합니다.
 
-### 설치 방법
+### 실행 및 인증
 
-Node.js(v18 이상)가 필요합니다. Node.js가 없다면 먼저 **https://nodejs.org** 에서 LTS 버전을 설치하세요.
+터미널에서 `agy`를 실행하여 최초 인증을 진행합니다:
 
 ```
-npm install -g @google/gemini-cli
+agy
 ```
-
-설치 후 로그인:
-```
-gemini
-```
-브라우저가 열리면 Google 계정으로 인증합니다.
+화면의 안내에 따라 인증을 완료합니다.
 
 ### 설치 확인
 ```
-gemini --version
+agy --version
 ```
 
 ---
@@ -66,5 +61,5 @@ gemini --version
 
 1. 앱 우상단 **[⚙ 설정]** 클릭
 2. **Provider** → **CLI** 선택
-3. **CLI 명령어** 입력란에 사용할 명령어 입력 (예: `claude` 또는 `gemini`)
+3. **CLI 명령어** 입력란에 사용할 명령어 입력 (예: `agy` 또는 `claude`)
 4. 설치 감지 상태가 ✅로 표시되면 **[연결 확인]** 클릭

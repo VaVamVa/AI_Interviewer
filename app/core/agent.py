@@ -49,7 +49,7 @@ PROVIDER_AVAILABLE = {
 }
 
 # 연결 확인 시 허용하는 AI CLI 명령어 목록
-_KNOWN_AI_CMDS = {"claude", "gemini", "codex"}
+_KNOWN_AI_CMDS = {"agy", "claude", "antigravity", "codex"}
 
 # ── 세션 객체 캐시 (API 모드에서 multi-turn 유지) ───────────────────────────
 _gemini_client       = None
@@ -318,60 +318,71 @@ def _ask_cli(user_text: str, history: list[dict], system_prompt: str, cfg: dict)
     cmd = cfg.get("cli_cmd", "claude")
 
     full_path = shutil.which(cmd)
+    if full_path is None and cmd.strip().lower() == "antigravity":
+        full_path = shutil.which("agy")
     if full_path is None:
         raise RuntimeError(f"'{cmd}' CLI를 찾을 수 없습니다. PATH를 확인해 주세요.")
 
     base_name = Path(full_path).stem.lower()
 
-    # CLI별 플래그 (stdin 파이프 수신 시)
-    # --dangerously-skip-permissions: Claude Code가 비대화형 환경에서 권한 확인을 건너뜀
-    # (stdin이 없는 subprocess이므로 권한 프롬프트에 응답할 수 없어 필수)
-    _CLI_FLAGS: dict[str, list[str]] = {
-        "claude": ["-p", "--dangerously-skip-permissions"],
-        "gemini": [],       # gemini    : 플래그 없이 stdin 읽음 (-p는 project ID 플래그)
-        "codex":  [],
-    }
-    flags = _CLI_FLAGS.get(base_name, ["-p"])
-    flags_str = (" " + " ".join(flags)) if flags else ""
+    if base_name in ("agy", "antigravity"):
+        # Antigravity CLI (agy): -p 옵션으로 프롬프트 직접 전달
+        result = subprocess.run(
+            [full_path, "-p", prompt, "--dangerously-skip-permissions", "--disable-slash-commands"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=180,
+        )
+    else:
+        # CLI별 플래그 (stdin 파이프 수신 시)
+        # --dangerously-skip-permissions: Claude Code가 비대화형 환경에서 권한 확인을 건너뜀
+        # (stdin이 없는 subprocess이므로 권한 프롬프트에 응답할 수 없어 필수)
+        _CLI_FLAGS: dict[str, list[str]] = {
+            "claude": ["-p", "--dangerously-skip-permissions"],
+            "codex":  [],
+        }
+        flags = _CLI_FLAGS.get(base_name, ["-p"])
+        flags_str = (" " + " ".join(flags)) if flags else ""
 
-    # 프롬프트를 임시 파일에 저장 (WinError 206 커맨드라인 길이 제한 우회)
-    tmp = _tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, encoding="utf-8"
-    )
-    try:
-        tmp.write(prompt)
-        tmp.flush()
-        tmp.close()
+        # 프롬프트를 임시 파일에 저장 (WinError 206 커맨드라인 길이 제한 우회)
+        tmp = _tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        )
+        try:
+            tmp.write(prompt)
+            tmp.flush()
+            tmp.close()
 
-        if sys.platform == "win32":
-            # $OutputEncoding: PowerShell이 파이프로 전달하는 바이트 인코딩
-            # [Console]::OutputEncoding: 자식 프로세스 출력을 캡처할 때 사용하는 인코딩
-            # -Encoding UTF8: Get-Content가 파일을 UTF-8로 읽도록 명시 (시스템 기본값 우회)
-            ps_cmd = (
-                "$OutputEncoding = [System.Text.Encoding]::UTF8; "
-                "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
-                f"Get-Content -Encoding UTF8 -Raw -Path '{tmp.name}'"
-                f" | & '{full_path}'{flags_str}"
-            )
-            result = subprocess.run(
-                ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                timeout=180,   # Node.js CLI cold start 포함해 최대 3분
-            )
-        else:
-            with open(tmp.name, encoding="utf-8") as stdin_f:
+            if sys.platform == "win32":
+                # $OutputEncoding: PowerShell이 파이프로 전달하는 바이트 인코딩
+                # [Console]::OutputEncoding: 자식 프로세스 출력을 캡처할 때 사용하는 인코딩
+                # -Encoding UTF8: Get-Content가 파일을 UTF-8로 읽도록 명시 (시스템 기본값 우회)
+                ps_cmd = (
+                    "$OutputEncoding = [System.Text.Encoding]::UTF8; "
+                    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+                    f"Get-Content -Encoding UTF8 -Raw -Path '{tmp.name}'"
+                    f" | & '{full_path}'{flags_str}"
+                )
                 result = subprocess.run(
-                    [full_path] + flags,
-                    stdin=stdin_f,
+                    ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
                     capture_output=True,
                     text=True,
                     encoding="utf-8",
-                    timeout=180,
+                    timeout=180,   # Node.js CLI cold start 포함해 최대 3분
                 )
-    finally:
-        Path(tmp.name).unlink(missing_ok=True)
+            else:
+                with open(tmp.name, encoding="utf-8") as stdin_f:
+                    result = subprocess.run(
+                        [full_path] + flags,
+                        stdin=stdin_f,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        timeout=180,
+                    )
+        finally:
+            Path(tmp.name).unlink(missing_ok=True)
 
     _log.debug(
         "CLI [%s] returncode=%d | stdout=%r | stderr=%r",
@@ -419,11 +430,13 @@ def _verify_ollama(cfg: dict) -> None:
 
 def _verify_cli(cfg: dict) -> None:
     cmd = cfg.get("cli_cmd", "claude")
-    if shutil.which(cmd) is None:
+    full_path = shutil.which(cmd)
+    if full_path is None and cmd.strip().lower() == "antigravity":
+        full_path = shutil.which("agy")
+    if full_path is None:
         raise RuntimeError(f"'{cmd}' CLI를 찾을 수 없습니다. PATH를 확인해 주세요.")
-    base_name = Path(cmd).stem.lower()
-    if base_name not in _KNOWN_AI_CMDS:
-        known_str = ", ".join(sorted(_KNOWN_AI_CMDS))
+    base_name = Path(full_path).stem.lower()
+    if base_name not in _KNOWN_AI_CMDS and cmd.strip().lower() not in _KNOWN_AI_CMDS:
         raise RuntimeError(
-            f"'{cmd}'은 알려진 AI CLI가 아닙니다.\n지원하는 AI CLI: {known_str}"
+            f"'{cmd}'은 알려진 AI CLI가 아닙니다.\n지원하는 AI CLI: agy, claude, codex"
         )
